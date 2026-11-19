@@ -1,0 +1,13 @@
+export const money = (value: any, digits = 0) => typeof value === 'number' ? new Intl.NumberFormat('en-US', {style:'currency', currency:'USD', maximumFractionDigits:digits, minimumFractionDigits:digits}).format(value) : value == null ? '—' : String(value);
+export const number = (value:any) => typeof value === 'number' ? new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(value) : value == null ? '—' : String(value);
+export const date = (v:any) => v ? new Date(String(v).length === 10 ? v+'T12:00:00Z' : v).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}) : '—';
+export const label = (s:any) => String(s??'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+export function latest(packet:any){return packet.return_versions[packet.return_versions.length-1]}
+export function currentValue(line:any,state:any){return [...(state.adjustments||[])].reverse().find((a:any)=>a.targetId===line.key&&a.status==='active')?.newValue ?? line.value;}
+export function indexPacket(p:any){const v=latest(p);return {docs:Object.fromEntries(p.documents.map((x:any)=>[x.id,x])),evs:Object.fromEntries(p.extracted_values.map((x:any)=>[x.id,x])),lines:Object.fromEntries(v.lines.map((x:any)=>[x.key,x]))};}
+export function downstream(p:any,ref:string){const lines=latest(p).lines;const found=new Set<string>();const queue=[ref];while(queue.length){const next=queue.shift();for(const l of lines){if(!found.has(l.key)&&[...(l.inputs||[]),...(l.sources||[])].includes(next)){found.add(l.key);queue.push(l.key)}}}return lines.filter((x:any)=>found.has(x.key));}
+export function directUses(p:any,ref:string){return latest(p).lines.filter((l:any)=>[...(l.inputs||[]),...(l.sources||[])].includes(ref));}
+export function jsonPointer(value:any,pointer:string){return pointer.split('/').slice(1).reduce((v,k)=>v?.[k.replace(/~1/g,'/').replace(/~0/g,'~')],value);}
+export const areaForms:Record<string,string[]>={
+  'Income':['F1040','Sch1','SchB'], 'Business':['SchC','SchSE','F8995'], 'Investments':['SchD','F8949'], 'Rentals & sale':['SchE','F4797','F8582'], 'Deductions & credits':['SchA','F8812','F8863','F2441','F8867'], 'Retirement & foreign':['F8606','F8889','F8938'], 'Pass-throughs & basis':['F7203'], 'Payments & additional tax':['F2210','F8959','F8960','F6251'], 'California':['F540NR','SchCA540NR','ScheduleS','FTB5805'], 'Depreciation':['F4562-C','F4562-E','FTB3885A']};
+export function sourceTitle(packet:any,ref:string){const idx=indexPacket(packet);if(idx.evs[ref])return `${idx.evs[ref].document_id} · ${idx.evs[ref].label}`;if(idx.lines[ref])return `${ref} · ${idx.lines[ref].label}`;const doc=ref.match(/^doc:(D\d+)/);if(doc)return `${doc[1]} · ${idx.docs[doc[1]]?.title||'Document'}`;return ref;}
